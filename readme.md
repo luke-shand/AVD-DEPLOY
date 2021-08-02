@@ -43,7 +43,8 @@ PatchVersion = Sub patch level (if patched multiple times in a month)
 
 The VMName will then be generate as below:
 
-VMPrefix-MinorVersion-PatchVersion-<VM number>
+**VMPrefix-MinorVersion-PatchVersion-VM number**
+
 e.g: **PROD-08-0-0**
 
 Of course this can be changed as required.
