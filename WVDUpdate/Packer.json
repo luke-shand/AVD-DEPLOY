@@ -1,0 +1,78 @@
+{
+    "variables": {
+        "client_id": "",
+        "client_secret": "",
+        "subscription_id": "{{env `ARM_SUBSCRIPTION_ID`}}",
+        "vm_size": "Standard_E8as_v4",
+        "SharedImageGalleryResourceGroup": "<CHANGE AS REQUIRED>",
+        "SharedImageGalleryName": "<CHANGE AS REQUIRED>",
+        "SharedImageGalleryDefinition": "<CHANGE AS REQUIRED>",
+        "SharedImageGalleryOldVersionName": "",
+        "SharedImageGalleryNewVersionName": "",
+        "Build_DefinitionName": "",
+        "Build_BuildNumber": ""
+    },
+    "builders": [
+        {
+            "type": "azure-arm",
+            "client_id": "{{user `client_id`}}",
+            "client_secret": "{{user `client_secret`}}",
+            "subscription_id": "{{user `subscription_id`}}",
+            "communicator": "winrm",
+            "winrm_use_ssl": "true",
+            "winrm_insecure": "true",
+            "winrm_timeout": "3m",
+            "winrm_username": "packer",
+            "os_type": "Windows",
+            "shared_image_gallery": {
+                "subscription": "{{user `subscription_id`}}",
+                "resource_group": "{{user `SharedImageGalleryResourceGroup`}}",
+                "gallery_name": "{{user `SharedImageGalleryName`}}",
+                "image_name": "{{user `SharedImageGalleryDefinition`}}",
+                "image_version": "{{user `SharedImageGalleryOldVersionName`}}"
+            },
+            "managed_image_name": "<CHANGE AS REQUIRED>",
+            "managed_image_resource_group_name": "{{user `SharedImageGalleryResourceGroup`}}",
+            "managed_image_storage_account_type": "Standard_LRS",
+            "shared_image_gallery_destination": {
+                "resource_group": "{{user `SharedImageGalleryResourceGroup`}}",
+                "gallery_name": "{{user `SharedImageGalleryName`}}",
+                "image_name": "{{user `SharedImageGalleryDefinition`}}",
+                "image_version": "{{user `SharedImageGalleryNewVersionName`}}",
+                "replication_regions": [
+                    "West Europe"
+                ]
+            },
+            "shared_image_gallery_timeout": "2h5m2s",
+            "temp_resource_group_name": "<CHANGE AS REQUIRED>",
+            "virtual_network_name": "<CHANGE AS REQUIRED>",
+            "virtual_network_subnet_name": "<CHANGE AS REQUIRED>",
+            "private_virtual_network_with_public_ip": "True",
+            "virtual_network_resource_group_name": "<CHANGE AS REQUIRED>",
+            "location": "<CHANGE AS REQUIRED>",
+            "vm_size": "{{user `vm_size`}}"
+        }
+    ],
+    "provisioners": [
+        {
+            "type": "windows-update",
+            "search_criteria": "IsInstalled=0",
+            "filters": [
+                "exclude:$_.Title -like '*Preview*'",
+                "include:$true"
+            ],
+            "update_limit": 25
+        },
+        {
+            "type": "powershell",
+            "elevated_user": "packer",
+            "elevated_password": "{{.WinRMPassword}}",
+            "inline": [
+                "New-ItemProperty -Path \"HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU\" -Name 'NoAutoUpdate' -Value '1' -PropertyType DWORD -Force | Out-Null",
+                "if( Test-Path $Env:SystemRoot\\windows\\system32\\Sysprep\\unattend.xml ){ rm $Env:SystemRoot\\windows\\system32\\Sysprep\\unattend.xml -Force}",
+                "& $env:SystemRoot\\System32\\Sysprep\\Sysprep.exe /oobe /generalize /quiet /quit /mode:vm",
+                "while($true) { $imageState = Get-ItemProperty HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Setup\\State | Select ImageState; if($imageState.ImageState -ne 'IMAGE_STATE_GENERALIZE_RESEAL_TO_OOBE') { Write-Output $imageState.ImageState; Start-Sleep -s 10  } else { break } }"
+            ]
+        }
+    ]
+}
