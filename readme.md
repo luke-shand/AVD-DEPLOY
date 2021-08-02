@@ -39,7 +39,7 @@ In the **WVDUpdate** folder is a single PowerShell script
 This script is used to automatically obtain the current latest Shared Image Gallery Version Name for the required Definition. 
 It also then generates the new version number based on:
 
-MajorVersion.MinorVersion.PatchVersion
+_**MajorVersion.MinorVersion.PatchVersion*_
 
 MajorVersion = Main version
 MinorVersion = Patch month (i.e. 08 for August)
