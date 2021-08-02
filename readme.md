@@ -32,7 +32,7 @@ This script can be used by a standalone Pipeline to obtain a list of Session Hos
 - Remove Session Host VM
 - Remove all VM Dependencies (NIC, OS Disk etc)
 
-In the **WVDUpdate** folder is a single PowerShell script
+In the **WVDUpdate** folder is a single PowerShell script and a Packer.JSON file.
 
 **PreBuild.ps1**
 
@@ -52,6 +52,14 @@ The VMName will then be generate as below:
 e.g: **PROD-08-0-0**
 
 Of course this can be changed as required.
+
+**Packer.json**
+
+This JSON file contains the base Packer configuration to perform the following:
+- Deploy VM from existing Shared Image Gallery Definition
+- Run Windows Updates on the deployed VM
+- Sysprep the VM
+- Capture VM into new Shared Image Gallery Definition Version.
  
 View my blog post at 
 
