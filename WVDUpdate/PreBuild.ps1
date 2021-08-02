@@ -24,7 +24,7 @@ if ($minor -eq $month) {
 $newVersion = "$($major).$($month).$($patch)"
 
 #Check for existing image and remove if required
-$image = Get-AzImage -Name "WVDGoldenABRI"
+$image = Get-AzImage -Name "WVDGolden"
 if ($image.count -gt 0) {
     Existing Managed Image found. Removing. . . 
     Remove-AzImage -Name $image.Name -ResourceGroupName $image.ResourceGroupName -Force | Out-Null
