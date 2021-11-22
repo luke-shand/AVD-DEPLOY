@@ -21,35 +21,41 @@ if ($update -eq "true") {
     
     foreach ($VM in $VMs) {
         if (($VM.tags["Version"]) -ne $version) { 
-            Write-Host "$VM.name added to Powerdown script."
-            $VMList += $VM
+            try {
+                Write-Host "Checking if machine is AVD Session Host"
+                $sessionHost = Get-AzWVDSessionHost -HostPool $hostPoolName -ResourceGroup $resourceGroup -Name "$($VM.name).$($domain)" -ErrorAction Stop
+                Write-Host "$($VM.name) added to Powerdown script."
+                $VMList += $VM
+            } catch {
+                Write-Host "$($VM.Name) is not a session host skipping."
+            }
         }
     }
+
     if ($VMList.count -gt 0) {
         Write-Host "$($VMList.count) Machines marked for shutdown."
     
         foreach ($VM in $VMList) {
+            Write-Host "Setting Session Host $($VM.name) to not allow new connections (drain mode)"
+            Update-AzWVDSessionHost -HostPool $hostPoolName -ResourceGroup $resourceGroup -SessionHost "$($VM.name).$($domain)" -AllowNewSession:$false
+            
+            $users = Get-AzWVDUserSession -HostPoolName $hostPoolName -ResourceGroupName $resourceGroup -SessionHostName "$($VM.name).$($domain)"
+            Write-Host "Checking if existing users on Session Host $($VM.name)"
+            if ($users.count -gt 0) {
     
-            Write-Host "Checking for Session Host"
-            $sessionHost = Get-AzWVDSessionHost -HostPool $hostPoolName -ResourceGroup $resourceGroup -Name "$($VM.name).$($domain)"
+                Write-Host "$($users.count) users are currently logged into Session Host: $($VM.name)"
+                Write-Host "Sending log off message to users."
     
-            if ($sessionHost.count -gt 0) {
-                Write-Host "Setting Session Host $($VM.name) to not allow new connections (drain mode)"
-                Update-AzWVDSessionHost -HostPool $hostPoolName -ResourceGroup $resourceGroup -SessionHost "$($VM.name).$($domain)" -AllowNewSession:$false
-                $users = Get-AzWVDUserSession -HostPoolName $hostPoolName -ResourceGroupName $resourceGroup -SessionHostName "$($VM.name).$($domain)"
-                if ($users.count -gt 0) {
-        
-                    Write-Host "$($users.count) users are currently logged into Session Host $($VM.name)"
-                    Write-Host "Sending log off message to users."
-        
-                    foreach ($user in $users) {
-                        $userList += $user
-                        $userid = $user.name.split("/")[2]
-                        Send-AzWVDUserSessionMessage -HostPool $hostPoolName -ResourceGroupName $resourceGroup -SessionHostName "$($vm.name).$($domain)" `
-                            -UserSessionId $userid -MessageTitle "Maintenance in Progress" `
-                            -MessageBody "You will be logged of in 5 minutes for routine maintenance. `nPlease save your documents"
-                    }
+                foreach ($user in $users) {
+                    $userList += $user
+                    $userid = $user.name.split("/")[2]
+                    Send-AzWVDUserSessionMessage -HostPool $hostPoolName -ResourceGroupName $resourceGroup -SessionHostName "$($vm.name).$($domain)" `
+                        -UserSessionId $userid -MessageTitle "Maintenance in Progress" `
+                        -MessageBody "You will be logged of in 5 minutes for routine maintenance. `nPlease save your documents"
                 }
+            } 
+            else {
+                Write-Host "No users present on Session Host: $($VM.name)"
             }
         }
     
@@ -57,7 +63,7 @@ if ($update -eq "true") {
             Write-Host "Sleeping for 5 mins to allow user logoff."
             Start-Sleep -Seconds 300
         
-            foreach ($user in $users) {
+            foreach ($user in $userList) {
                 $userid = $user.name.split("/")[2]
                 $sessionHostName = $user.name.split("/")[1]
                 Remove-AzWVDUserSession -HostPoolName $hostPoolName -ResourceGroupName $resourceGroup -SessionHostName $sessionHostName `
@@ -81,16 +87,7 @@ if ($update -eq "true") {
         $jobs = @()
     
         foreach ($VM in $VMList) {
-
-            # Write-Host "Removing Session Host: $($VM.Name) from Host Pool: $hostPoolName"
-            # try {
-            #     Remove-AzWvdSessionHost -ResourceGroupName $resourceGroup -HostPoolName $HostpoolName -Name "$($vm.name).$($domain)" -ErrorAction Stop
-            # }
-            # catch {
-            #     Write-Host "ERROR: Failed to remove Session Host $($VM.Name) from Host Pool: $($hostPoolName)"
-            #     Write-Host $_Exception.Message
-            # }
-            
+        
             #Set Tag for removal
             $tags = (Get-AzResource -ResourceGroupName $VM.ResourceGroupName -Name $VM.Name).Tags
             $tags += @{Remove = "True" }
