@@ -61,8 +61,7 @@ This JSON file contains the base Packer configuration to perform the following:
 - Sysprep the VM
 - Capture VM into new Shared Image Gallery Definition Version.
  
-View my blog post at 
+Full deployment build can be found in the following blog post at 
 
-<link to come>
+https://tighetec.co.uk/2021/08/02/avd-deployment-and-update-part-1-building-automation/
 
-for full information on how this was created.
